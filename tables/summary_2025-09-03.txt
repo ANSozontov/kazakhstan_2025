@@ -1,0 +1,19 @@
+The literature dataset includes 1507 occurrences
+1248 of which belong to the plain part of the studied region
+The remaining 259 occurrences come from the mountainous part
+
+The IZRK collection dataset includes 543 occurrences
+The total number of adult spiders collected during this period was 805 specimens
+among them 184 species were identified
+
+In total, we processed 74 references 
+66 of them contain occurrences from the studied region
+All literature data contain 1248 records of 265 species
+
+iNaturalist data: 2364 occurrences
+GBIF.org data: 27 occurrences
+
+Thus, at least 404 spider species from 156 genera and 31 families are known from the region
+
+More than half of the recorded species ( 230 57 %) were found exclusively in a single dataset:
+1.lit.pln: 124;  2.inat: 44;  3.gbif: 3;  4.izrk: 59
