@@ -16,7 +16,7 @@ path <- dir() %>%
     sort(decreasing = TRUE) %>% 
     `[`(1)
 raw.data <- list()
-raw.data$izkn <- readxl::read_excel(path, sheet = "raw-data") 
+raw.data$izrk <- readxl::read_excel(path, sheet = "raw-data") 
 
 raw.data$lit <- readxl::read_excel(path, sheet = "lib-data") %>% 
     select(RECORD:taxonRemarks) %>% 
@@ -30,7 +30,7 @@ raw.data$gbif <- "0086127-250717081556266" %>%
     occ_download_import()
 
 # Data wrangling ----------------------------------------------------------
-izkn <- raw.data$izkn %>% 
+izrk <- raw.data$izrk %>% 
     select(RECORD:taxonRemarks) %>% 
     select(-RECORD, -OCCURRENCE, -EVENT, -LOCATION, -TAXON) %>% 
     mutate(
@@ -46,7 +46,7 @@ gbif <- raw.data$gbif %>%
         taxonRank, occurrenceID,
         identificationRemarks, taxonRemarks,
         decimalLatitude, decimalLongitude, 
-        ) %>%  
+        ) %>% 
     filter(
         taxonRank %in% c("GENUS", "SPECIES", "SUBSPECIES"),
         !is.na(decimalLatitude) | !is.na(decimalLongitude)) %>%
@@ -114,7 +114,7 @@ gbif <- raw.data$gbif %>%
 
 {
 sp.to.remove1 <- 
-            "Aelurillus lutosus|Berlandina saraevi|Heriaeus horridus|
+            "Aelurillus lutosus|Heriaeus horridus|
             |Heriaeus oblongus|Heterotheridion nigrovariegatum|
             |Hypsosinga kazachstanica|Larinia phthisica|Neoscona spasskyi|
             |Pardosa falcata|Philodromus emarginatus|Platnickina tincta|
@@ -157,7 +157,7 @@ cat("data are here")
 #! iNAT: Evippa beschkentica -> Evippa caucasica
 
 sp_list_list <- lst(
-    `4.izkn` = mutate(izkn, taxonRemarks = paste0(identificationRemarks, ", ", taxonRemarks)),
+    `4.izrk` = mutate(izrk, taxonRemarks = paste0(identificationRemarks, ", ", taxonRemarks)),
     `1.lit.pln` = lit.pln, `3.gbif` = gbif, `2.inat` = inat) %>% 
     map(~.x %>% 
             st_drop_geometry %>% 
@@ -189,8 +189,8 @@ sp_list_df <- sp_list_df %>%
     pivot_wider(names_from = dataset, values_from = status, values_fill = NA, values_fn = sum) %>% 
     left_join(remarks, by = "scientificName")
 
-# IZKN collectors
-IZKN_collectors <- izkn %>% 
+# IZRK collectors
+IZRK_collectors <- izrk %>% 
     pull(recordedBy) %>% 
     str_split(", ") %>% 
     flatten_chr() %>% 
@@ -249,9 +249,9 @@ results <- c(
     paste(nrow(lit.pln), "of which belong to the plain part of the studied region"), 
     paste("The remaining", nrow(lit.mnt), "occurrences come from the mountainous part"),
     "",
-    paste("The IZKN collection dataset includes", nrow(izkn), "occurrences"),
-    paste("The total number of adult spiders collected during this period was", sum(izkn$individualCount), "specimens"),
-    paste("among them", nrow(distinct(izkn["species"])), "species were identified"),
+    paste("The IZRK collection dataset includes", nrow(izrk), "occurrences"),
+    paste("The total number of adult spiders collected during this period was", sum(izrk$individualCount), "specimens"),
+    paste("among them", nrow(distinct(izrk["species"])), "species were identified"),
     "", 
     paste("In total, we processed", nrow(bib_table), "references "), 
     paste(nrow(filter(bib_table, n_focus != 0)), "of them contain occurrences from the studied region"), 
@@ -274,7 +274,7 @@ results <- c(
 )
 cat("Results:", results, sep = "\n")
 # MAP ---------------------------------------------------------------------
-geo_plot <- lst(izkn, lit.pln, lit.mnt, gbif, inat) %>%
+geo_plot <- lst(izrk, lit.pln, lit.mnt, gbif, inat) %>%
     map(~.x %>% 
             filter(taxonRank == "SPECIES" | str_detect(species, " sp\\.")) %>% 
             # separate(scientificName, c("g", "sp"), sep = " ", extra = "drop") %>% 
@@ -335,11 +335,11 @@ leaflet() %>%
         label = ~taxa, popup = ~occurrenceID,
         group = "literature (plain)") %>%
     addCircleMarkers(
-        data = geo_plot$izkn,
+        data = geo_plot$izrk,
         fillColor = "green", fillOpacity = 0.3, 
         color = "white",  opacity = 1,
         label = ~taxa, popup = ~occurrenceID,
-        group = "IZKN") %>%
+        group = "IZRK") %>%
     addCircleMarkers(
         data = geo_plot$gbif,
         color = "pink",  fillOpacity = 0,
@@ -348,7 +348,7 @@ leaflet() %>%
     addLayersControl(
         overlayGroups = c(
             "OSM", "ELEVATION",
-            "iNaturalist", "GBIF", "IZKN",
+            "iNaturalist", "GBIF", "IZRK",
             "literature (plain)",
             "literature (mountain)"),
         options = layersControlOptions(collapsed = FALSE)
@@ -367,7 +367,7 @@ sp_list_list %>%
     ) %>% 
     venn.diagram(
         x = .,
-        category.names = c("IZKN" , "Liter." , 
+        category.names = c("IZRK" , "Liter." , 
                            "GBIF", "iNat"),
         filename = paste0('figures/venn.diagramm_', Sys.Date(), '.png'),
         disable.logging = TRUE,
@@ -419,7 +419,7 @@ ggsave(paste0('figures/pie.chart_', Sys.Date(), '.pdf'))
 # export ------------------------------------------------------------------
 lst(
     `species list` = sp_list_df, 
-    IZKN_collectors, 
+    IZRK_collectors, 
     referenes = bib_table, 
     `families ratio` = piecharts_table) %>% 
     writexl::write_xlsx(paste0("tables/tables_",  Sys.Date(), ".xlsx"))
@@ -589,7 +589,7 @@ b <- sort(unique(a$occurrenceRemarks))
 b <- sapply(b, contains_cyrillic)
 b[b]
 
-gen <- izkn %>% 
+gen <- izrk %>% 
     split(.$taxonRank) %>% 
     map(~.x %>% 
             pull(genus) %>% 
@@ -597,7 +597,7 @@ gen <- izkn %>%
             sort
     )
 
-# izkn %>% 
+# izrk %>% 
 #     filter(taxonRank == "SPECIES" | genus %in% gen$GENUS[!(gen$GENUS %in% gen$SPECIES)]) %>% 
 #     select(scientificName) %>% 
 #     distinct() %>% 
