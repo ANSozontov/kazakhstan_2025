@@ -16,7 +16,8 @@ path <- dir() %>%
     sort(decreasing = TRUE) %>% 
     `[`(1)
 raw.data <- list()
-raw.data$izrk <- readxl::read_excel(path, sheet = "raw-data") 
+raw.data$izrk <- readxl::read_excel(path, sheet = "raw-data") %>% 
+    select(-RECORD, -OCCURRENCE, -EVENT, -LOCATION, -TAXON)
 
 raw.data$lit <- readxl::read_excel(path, sheet = "lib-data") %>% 
     select(RECORD:taxonRemarks) %>% 
@@ -432,13 +433,17 @@ contains_cyrillic <- function(text) {
     str_detect(text, "[\\u0400-\\u04FF]")
 }
 
+readr::write_delim(raw.data$lit, "occ_literature.csv", delim = "\t")
+readr::write_delim(raw.data$izrk, "occ_collection.csv", delim = "\t")
+
+
 lit <- rbind(lit.mnt, lit.pln)
 lit %>% 
     #убирать перед проверкой на кириллицу
     select(-starts_with("verba"), -associatedReferences, -bibliographicCitation) %>% 
     sapply(contains_cyrillic)
 
-readr::write_delim(lit, "occ_literature.csv", delim = "\t")
+
 x <- unzip("0086127-250717081556266.zip", "occurrence.txt") %>% 
     readr::read_delim() %>% 
     filter(taxonRank %in% c("GENUS", "SPECIES", "SUBSPECIES"))
