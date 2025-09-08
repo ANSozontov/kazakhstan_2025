@@ -32,8 +32,6 @@ raw.data$gbif <- "0086127-250717081556266" %>%
 
 # Data wrangling ----------------------------------------------------------
 izrk <- raw.data$izrk %>% 
-    select(RECORD:taxonRemarks) %>% 
-    select(-RECORD, -OCCURRENCE, -EVENT, -LOCATION, -TAXON) %>% 
     mutate(
         scientificName = str_replace_all(scientificName, "L. ", "L."),
         scientificName = str_replace_all(scientificName, "C. ", "C."),
@@ -275,8 +273,14 @@ results <- c(
 )
 cat("Results:", results, sep = "\n")
 # MAP ---------------------------------------------------------------------
-geo_plot <- lst(izrk, lit.pln, lit.mnt, gbif, inat) %>%
-    map(~.x %>% 
+geo_plot <- lst(
+    izrk,
+    lit.pln,
+    lit.mnt,
+    gbif,
+    inat
+    ) %>%
+    map(~.x %>%
             filter(taxonRank == "SPECIES" | str_detect(species, " sp\\.")) %>% 
             # separate(scientificName, c("g", "sp"), sep = " ", extra = "drop") %>% 
             # mutate(taxa = case_when(
