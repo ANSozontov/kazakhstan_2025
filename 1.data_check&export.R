@@ -24,26 +24,40 @@ izrk <- readxl::read_excel(path, sheet = "raw-data") %>%
         scientificName = str_replace_all(scientificName, "O. ", "O."),
         scientificName = str_replace_all(scientificName, "\\. ", "\\.")) %>% 
     mutate_at(c("decimalLongitude", "decimalLatitude"), as.numeric)
-
-# check part 1 ------------------------------------------------------------
+rm(path)
+# check parts 1&2 ---------------------------------------------------------
 lit %>% 
     mutate_all(contains_cyrillic) %>% 
     sapply(unique) %>% 
     sort 
+izrk %>% 
+    mutate_all(contains_cyrillic) %>% 
+    sapply(unique) %>% 
+    sort 
 
-values <- lit %>% 
-    flatten_chr() %>% 
-    unique()
-symbols <- lit %>% 
-    flatten_chr() %>% 
-    strsplit("") %>% 
-    flatten_chr() %>% 
-    table  %>% 
-    tibble(l = names(.), n  = as.numeric(.)) %>% 
-    select(l, n)
+values <- lst(lit, izrk) %>% 
+    map(~.x %>% 
+            flatten_chr %>% 
+            unique
+    )
+
+symbols <- values %>% 
+    map(~.x %>% 
+        # flatten_chr() %>% 
+        strsplit("") %>% 
+        flatten_chr() %>% 
+        table  %>% 
+        tibble(l = names(.), n  = as.numeric(.)) %>% 
+        select(l, n)
+    )
+symbols <- left_join(symbols$lit, symbols$izrk, by = "l") %>% 
+    rename(lit = 2, izrk = 3)
 
 # export ------------------------------------------------------------------
-lit %>% 
+rm(symbols, values, contains_cyrillic)
+save.image(paste0("lit&izrk_", Sys.Date(), ".RData"))
+lit <- lit %>% 
+    mutate_if(is.character, str_squish) %>% 
     mutate(
         decimalLatitude = case_when(
             coordinateUncertaintyInMeters > 10000 ~ round(decimalLatitude, 2), 
@@ -56,10 +70,26 @@ lit %>%
             coordinateUncertaintyInMeters > 5000 ~ round(decimalLongitude, 3), 
             coordinateUncertaintyInMeters > 1000 ~ round(decimalLongitude, 4), 
             TRUE ~ round(decimalLongitude, 5)),
-    ) %>% 
-    readr::write_delim("data/part1/occurrences_lit.txt", delim = "\t", na = "")
+    )
+if(lit %>% 
+    select(starts_with("decimal")) %>% 
+    mutate_all(as.character) %>% 
+    flatten_chr() %>% 
+    nchar() %>% 
+    max(na.rm = TRUE) <= 8) {
+    
+    readr::write_delim(
+        lit, 
+        "data/part1/occurrences_lit.txt", 
+        delim = "\t", 
+        na = "")   
+    cli::cli_alert_success("The literature dataset export is successful")
+} else {
+    cli::cli_abort("Too high coordinates precision is detected!")
+}
 
-izrk %>% 
+izrk <- izrk %>% 
+    mutate_if(is.character, str_squish) %>% 
     mutate(
         decimalLatitude = case_when(
             coordinateUncertaintyInMeters > 10000 ~ round(decimalLatitude, 2), 
@@ -72,7 +102,28 @@ izrk %>%
             coordinateUncertaintyInMeters > 5000 ~ round(decimalLongitude, 3), 
             coordinateUncertaintyInMeters > 1000 ~ round(decimalLongitude, 4), 
             TRUE ~ round(decimalLongitude, 5)),
-    ) %>% 
-    readr::write_delim("data/part2/occurrences_coll.txt", delim = "\t", na = "")
+    )
 
+if(lit %>% 
+    select(starts_with("decimal")) %>% 
+    mutate_all(as.character) %>% 
+    flatten_chr() %>% 
+    nchar() %>% 
+    max(na.rm = TRUE) <= 8) {
+    
+    readr::write_delim(
+        izrk, 
+        "data/part2/occurrences_coll.txt", 
+        delim = "\t", 
+        na = "")
+    cli::cli_alert_success("The collection dataset export is successful")
+} else {
+    cli::cli_abort("Too high coordinates precision is detected!")
+} 
+    
+full_join(
+    tibble(dwc = colnames(lit),  lit = TRUE),
+    tibble(dwc = colnames(izrk), izrk = TRUE),
+    by = "dwc") %>% 
+    writexl::write_xlsx("data/dwc_columns.xlsx")
 
