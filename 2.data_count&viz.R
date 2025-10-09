@@ -11,9 +11,17 @@ gis_data <- list(
     kaz2  = st_read("gis/kaz2_alm.shp")
 )
 
-# izrk 
-# lit.mnt <- filter(lit, str_detect(dynamicProperties, "mountain"))
-# lit.pln <- filter(lit, str_detect(dynamicProperties, "plain"))
+path <- dir(pattern = ".RData") %>% 
+    # str_subset("^data.*\\.xlsx$") %>% 
+    # str_subset("~", negate = TRUE) %>% 
+    sort(decreasing = TRUE) %>% 
+    `[`(1)
+load(path)
+izrk <- mutate(izrk, species = scientificName)
+lit  <- mutate(lit,  species = acceptedNameUsage)
+
+lit.mnt <- filter(lit, str_detect(dynamicProperties, "mountain"))
+lit.pln <- filter(lit, str_detect(dynamicProperties, "plain"))
 
 gbif <- "0086127-250717081556266" %>% 
     occ_download_get(path = "./data", overwrite = F) %>% 
@@ -412,176 +420,4 @@ lst(
 readr::write_lines(results, paste0("tables/summary_",  Sys.Date(), ".txt"))
 cat("Results:", results, sep = "\n")
 
-# check ---------------------------------------------------------------------
-
-
-lit <- rbind(lit.mnt, lit.pln)
-lit %>% 
-    #убирать перед проверкой на кириллицу
-    select(-starts_with("verba"), -associatedReferences, -bibliographicCitation) %>% 
-    sapply(contains_cyrillic)
-
-
-x <- unzip("0086127-250717081556266.zip", "occurrence.txt") %>% 
-    readr::read_delim() %>% 
-    filter(taxonRank %in% c("GENUS", "SPECIES", "SUBSPECIES"))
-
-# inat
-inat <- x %>% 
-    filter(datasetName == "iNaturalist research-grade observations") %>% 
-    mutate(
-        eventDate = substr(eventDate, 1, 10), 
-        eventDate = as.Date(eventDate)) %>%
-    filter(eventDate  < as.Date("2025-04-30")) %>% 
-    select(scientificName, taxonRank, decimalLatitude, decimalLongitude) %>% 
-    st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
-    
-# non-inat GBIF
-gbif_all <- x %>% 
-    filter(datasetName != "iNaturalist research-grade observations") %>% 
-    select(scientificName, taxonRank, decimalLatitude, decimalLongitude)
-# gbif <- gbif_all %>% 
-#     filter(
-#         !is.na(decimalLongitude), 
-#         !is.na(decimalLatitude)) %>% 
-#     st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
-
-DF <- list(
-    own = readxl::read_excel("data_2025-08-07.xlsx", sheet = "raw-data"),
-    lit_mnt = "data_2025-08-07.xlsx" %>% 
-        readxl::read_excel(sheet = "lib-data") %>% 
-        filter(str_detect(dynamicProperties, "mountain")),
-    lit_pln = "data_2025-08-07.xlsx" %>% 
-        readxl::read_excel(sheet = "lib-data") %>% 
-        filter(str_detect(dynamicProperties, "plain"))
-    ) %>% 
-    map(~.x %>% 
-        filter(taxonRank %in% c("GENUS", "SPECIES", "SUBSPECIES")) %>% 
-        separate(occurrenceID, c("tmp", "ID"), "spiders_") %>% 
-        transmute(scientificName,
-                  # ID, 
-                  taxonRank, decimalLatitude, decimalLongitude) %>% 
-        ###
-        distinct %>% 
-        group_by(decimalLatitude, decimalLongitude) %>% 
-        summarise(#ID = paste0(ID, collapse = "; "),
-                  scientificName = paste0(scientificName, collapse = "; "),
-                  .groups = "drop") %>% 
-        ###    
-        st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), 
-            crs = 4326, remove = FALSE)
-        )
-
-leaflet() %>% 
-    addTiles() %>% 
-    addPolygons(data = kz0, 
-                fillOpacity = 0, opacity = 1) %>% 
-    addPolygons(data = focus, color = "red",
-                fillOpacity = 0, opacity = 1) %>% 
-    addCircleMarkers(data = DF$own,
-                     label = ~species, popup = ~ID,
-                     color = "darkgreen")
-
-own <- readxl::read_excel("data_2025-08-07.xlsx", sheet = "raw-data") %>% 
-    # filter()
-    select(-starts_with("verba")) %>% 
-    select(RECORD:taxonRemarks) %>% 
-    transmute(ID = occurrenceID, species, decimalLatitude, decimalLongitude) %>% 
-    filter(!is.na(decimalLatitude), !is.na(decimalLongitude)) %>% 
-    st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), 
-             crs = 4326, remove = FALSE)
-
-lit <- readxl::read_excel("data_2025-08-07.xlsx", sheet = "lib-data") %>% 
-    select(RECORD:taxonRemarks) %>% 
-    select(-starts_with("verba")) %>% 
-    transmute(ID = as.character(ID), species, decimalLatitude, decimalLongitude) %>% 
-    filter(!is.na(decimalLatitude), !is.na(decimalLongitude)) %>%
-    # filter(str_detect(species, "Pseudicius encarpatus")) %>% 
-    st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), 
-             crs = 4326, remove = FALSE) 
-
-leaflet() %>% 
-    addTiles() %>% 
-    addPolygons(data = kz0, 
-                fillOpacity = 0, opacity = 1) %>% 
-    addPolygons(data = focus, color = "darkgreen",
-                fillOpacity = 0, opacity = 1) %>% 
-    addCircleMarkers(data = slice(own, 427),
-                     label = ~species, popup = ~ID,
-                     color = "darkgreen") 
-    # addCircleMarkers(data = lit, 
-    #                  color = "blue",
-    #                  label = ~species, popup = ~ID)
-
-
-
-st_covered_by(geo$inat, focus) 
-i2 <- geo$inat[st_intersects(geo$inat, focus, sparse = FALSE), ]
-
-
-result <- st_join(b, kz2, join = st_within)
-
-result %>% 
-    st_drop_geometry() %>% 
-    select(1:3, COUNTRY, NAME_1, NAME_2, ENGTYPE_2) %>% 
-    writexl::write_xlsx("tmp.xlsx")
-
-focus <- st_read("kaz.gpkg", "focus")
-
-ggplot()+ 
-    geom_sf(data = kz0, fill = "white") + 
-    # geom_sf(data = ak, fill = "red") +
-    geom_sf(data = own, color = "darkgreen") + 
-    geom_sf(data = lit_yes, color = "blue") + 
-    geom_sf(data = lit_no, color = "red")
-
-
-leaflet() %>% 
-    addTiles() %>% 
-    addPolygons(data = k1, fillOpacity = 0, color = "darkgray", opacity = 1) %>% 
-    addPolygons(data = filter(kz2, NAME_1 == "Almaty"), 
-                fillOpacity = 0, color = "white", opacity = 1) %>% 
-    addPolygons(data = k0, fillOpacity = 0, color = "black", opacity = 1) %>%
-    addPolygons(data = focus, fillOpacity = 0, color = "darkgreen", opacity = 1)
-
-
-all <- DF %>% 
-    append(list(inat = i2, gbif_all = gbif_all)) %>% 
-    map(~.x %>% 
-            st_drop_geometry %>% 
-            select(scientificName, taxonRank)
-    ) %>% 
-    map_dfr(rbind, .id = "dataset") %>% 
-    mutate(i = "+") %>% 
-    distinct() %>% 
-    pivot_wider(names_from = dataset, values_from = i) %>% 
-    arrange(scientificName)
-
-all %>% 
-    separate(1, "gen", sep = " ", extra = "drop", remove = F) %>% 
-    filter(gen %in% c("Hylyphantes", "Pirata", "Pritha", "Segestria", "Sitticus") | 
-               taxonRank != "GENUS") %>% 
-    select(-gen)
-
-
-
-b <- sapply(a, contains_cyrillic)
-b[b]
-
-b <- sort(unique(a$occurrenceRemarks))
-b <- sapply(b, contains_cyrillic)
-b[b]
-
-gen <- izrk %>% 
-    split(.$taxonRank) %>% 
-    map(~.x %>% 
-            pull(genus) %>% 
-            unique %>% 
-            sort
-    )
-
-# izrk %>% 
-#     filter(taxonRank == "SPECIES" | genus %in% gen$GENUS[!(gen$GENUS %in% gen$SPECIES)]) %>% 
-#     select(scientificName) %>% 
-#     distinct() %>% 
-#     arrange(scientificName) 
+# arj ----------------------------------------------------------------
