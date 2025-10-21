@@ -24,7 +24,7 @@ izrk <- readxl::read_excel(path, sheet = "raw-data") %>%
         scientificName = str_replace_all(scientificName, "O. ", "O."),
         scientificName = str_replace_all(scientificName, "\\. ", "\\.")) %>% 
     mutate_at(c("decimalLongitude", "decimalLatitude"), as.numeric)
-rm(path)
+# rm(path)
 # check parts 1&2 ---------------------------------------------------------
 lit %>% 
     mutate_all(contains_cyrillic) %>% 
@@ -54,7 +54,7 @@ symbols <- left_join(symbols$lit, symbols$izrk, by = "l") %>%
     rename(lit = 2, izrk = 3)
 
 # export ------------------------------------------------------------------
-rm(symbols, values, contains_cyrillic)
+# rm(symbols, values, contains_cyrillic)
 save.image(paste0("lit&izrk_", Sys.Date(), ".RData"))
 lit <- lit %>% 
     mutate_if(is.character, str_squish) %>% 
@@ -70,7 +70,34 @@ lit <- lit %>%
             coordinateUncertaintyInMeters > 5000 ~ round(decimalLongitude, 3), 
             coordinateUncertaintyInMeters > 1000 ~ round(decimalLongitude, 4), 
             TRUE ~ round(decimalLongitude, 5)),
+        
+        decimalLatitude = as.character(decimalLatitude),
+        decimalLongitude = as.character(decimalLongitude),
+        
+        decimalLatitude = case_when(nchar(decimalLatitude) > 8 ~ substr(decimalLatitude, 1, 8), TRUE ~ decimalLatitude),
+        decimalLongitude = case_when(nchar(decimalLongitude) > 8 ~ substr(decimalLongitude, 1, 8), TRUE ~ decimalLongitude)
     )
+
+
+for(i in 1:nrow(lit)){
+    if(is.na(lit$decimalLatitude[i])){
+        
+    } else if (nchar(lit$decimalLatitude[i]) < nchar(lit$decimalLongitude[i])){
+        # decimalLatitude
+        
+        lit$decimalLatitude[i] <- paste0(
+            lit$decimalLatitude[i], 
+            paste0(rep("0", nchar(lit$decimalLongitude[i]) - nchar(lit$decimalLatitude[i])), collapse = "")
+        )
+    } else if(nchar(lit$decimalLongitude[i]) < nchar(lit$decimalLatitude[i])){
+        # decimalLongitude
+        lit$decimalLongitude[i] <- paste0(
+            lit$decimalLongitude[i], 
+            paste0(rep("0", nchar(lit$decimalLatitude[i]) - nchar(lit$decimalLongitude[i])), collapse = "")
+        )
+    }
+}
+
 if(lit %>% 
     select(starts_with("decimal")) %>% 
     mutate_all(as.character) %>% 
@@ -102,7 +129,31 @@ izrk <- izrk %>%
             coordinateUncertaintyInMeters > 5000 ~ round(decimalLongitude, 3), 
             coordinateUncertaintyInMeters > 1000 ~ round(decimalLongitude, 4), 
             TRUE ~ round(decimalLongitude, 5)),
+        
+        decimalLatitude = as.character(decimalLatitude),
+        decimalLongitude = as.character(decimalLongitude),
+        
+        decimalLatitude = case_when(nchar(decimalLatitude) > 8 ~ substr(decimalLatitude, 1, 8), TRUE ~ decimalLatitude),
+        decimalLongitude = case_when(nchar(decimalLongitude) > 8 ~ substr(decimalLongitude, 1, 8), TRUE ~ decimalLongitude),
     )
+
+for(i in 1:nrow(izrk)){
+    if(is.na(izrk$decimalLatitude[i])){
+        
+    } else if (nchar(izrk$decimalLatitude[i]) < nchar(izrk$decimalLongitude[i])){
+        # decimalLatitude
+        izrk$decimalLatitude[i] <- paste0(
+            izrk$decimalLatitude[i], 
+            paste0(rep("0", nchar(izrk$decimalLongitude[i]) - nchar(izrk$decimalLatitude[i])), collapse = "")
+        )
+    } else if(nchar(izrk$decimalLongitude[i]) < nchar(izrk$decimalLatitude[i])){
+        # decimalLongitude
+        izrk$decimalLongitude[i] <- paste0(
+            izrk$decimalLongitude[i], 
+            paste0(rep("0", nchar(izrk$decimalLatitude[i]) - nchar(izrk$decimalLongitude[i])), collapse = "")
+        )
+    }
+}
 
 if(lit %>% 
     select(starts_with("decimal")) %>% 
