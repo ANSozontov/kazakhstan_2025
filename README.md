@@ -1,6 +1,6 @@
 Raw data & source code for the artice:
 
-# Spider (Arachnida, Araneae) fauna of the lowland part of the Balkhash-Alakol basin (SE Kazakhstan): an integrated assessment
+# Spider (Arachnida, Araneae) fauna of the lowland part of the Balkhash-Alakol basin (SE Kazakhstan): an integrated assessment // Biodiversity Data Journal. 2025. (submited)
 
 [Anna A. Nekhaeva](http://google.com/), [Leonid V. Kim](http://google.com/), [Anel A. Ishaeva](http://google.com/), [Anatoty V. Ozernoy](http://google.com/), [Sozontov A.N.](https://ipae.uran.ru/Sozontov_AN). 2025. Biodiversity data journal. submited...
 
