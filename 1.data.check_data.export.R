@@ -55,7 +55,7 @@ symbols <- left_join(symbols$lit, symbols$izrk, by = "l") %>%
 
 # export ------------------------------------------------------------------
 # rm(symbols, values, contains_cyrillic)
-save.image(paste0("lit&izrk_", Sys.Date(), ".RData"))
+save.image(paste0("lit_izrk_", Sys.Date(), ".RData"))
 lit <- lit %>% 
     mutate_if(is.character, str_squish) %>% 
     mutate(
