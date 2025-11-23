@@ -1,4 +1,4 @@
-Raw data & source code for the artice:
+Raw data & source code for the article:
 
 # Spider (Arachnida, Araneae) fauna of the lowland part of the Balkhash-Alakol basin (SE Kazakhstan): an integrated assessment // Biodiversity Data Journal. 2025. (submited)
 
