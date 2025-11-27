@@ -26,6 +26,8 @@ izrk <- readxl::read_excel(path, sheet = "raw-data") %>%
     mutate_at(c("decimalLongitude", "decimalLatitude"), as.numeric)
 # rm(path)
 # check parts 1&2 ---------------------------------------------------------
+# !Check for unique occurrenceID!
+
 lit %>% 
     mutate_all(contains_cyrillic) %>% 
     sapply(unique) %>% 
