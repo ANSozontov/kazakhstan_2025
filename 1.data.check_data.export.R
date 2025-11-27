@@ -27,6 +27,11 @@ izrk <- readxl::read_excel(path, sheet = "raw-data") %>%
 # rm(path)
 # check parts 1&2 ---------------------------------------------------------
 # !Check for unique occurrenceID!
+filter(count(lit, occurrenceID), n > 1)
+filter(count(lit, bibliographicCitation), n > 1)
+filter(count(izrk, occurrenceID), n > 1)
+# !Check for unique collectionCodes 
+izrk %>% group_by(recordNumber, sex) %>% summarise(n = n(), .groups = "drop") %>% filter(n > 1)
 
 lit %>% 
     mutate_all(contains_cyrillic) %>% 
